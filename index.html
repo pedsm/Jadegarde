@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/4.10.0/d3.js"></script>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/skeleton/2.0.4/skeleton.css">
+        <title></title>
+    </head>
+    <body>
+        <script>
+            // Clean two first liness
+            d3.request('data.csv').get(function (err, response) {
+                const columns = [
+                    'Attending',
+                    'Discord-Name',
+                    'Family',
+                    'Class',
+                    'Level',
+                    'GS',
+                    'OP'
+                ]
+                // Get players
+                let data = d3.csvParse(response.response
+                    .split('\n')
+                    .slice(2)
+                    .reduce((a, b) => `${a}\n${b}`))
+                    .filter((a,i) => a.Attending !== "")
+                    .map((a) => Object.assign(a, {
+                        GS: +a.AAP + +a.DP,
+                        OP: (+a.AAP / +a.DP).toFixed(2)
+                    }))
+
+                // Sort players
+                data = data.sort((a, b) => b.GS - a.GS)
+
+                // Split teams
+                function chunk(arr, size) {
+                    if(arr.length + 1 < size) {
+                        return [arr];
+                    }
+                    return [arr.slice(0,size)].concat(chunk(arr.slice(size), size))
+                }
+                let chunks = chunk(data, 5)
+                console.log(chunks);
+                chunks.forEach((a, i) => {
+                    let label = `Flex ${i}`;
+                    if(i === 0)
+                        label = 'Assault';
+                    else if(i === chunks.length - 1)
+                        label = 'Defense'
+                    makeTable(a, label)
+                })
+
+                // Make a table
+                function makeTable(input, label) {
+                    let title = d3.select('body')
+                        .append('center')
+                        .append('h3')
+                        .text(label)
+                    let table = d3.select('body')
+                        .append('center')
+                        .append('table')
+
+                    let header = table.append('thead')
+                        .selectAll('th')
+                        .data(columns)
+                        .enter()
+                        .append('th')
+                        .text(d => d)
+
+                    let rows = table.selectAll('tr')
+                        .data(input)
+                        .enter()
+                        .append('tr')
+
+                    let cells = rows.selectAll('tr')
+                        .data(function (row) {
+                            return columns.map((column) => {
+                                return {column: column, value: row[column]};
+                            });
+                        })
+                        .enter()
+                        .append('td')
+                        .text(function (d) { return d.value; });
+                }
+            })
+        </script>
+    </body>
+</html>
